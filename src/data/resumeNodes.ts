@@ -1,5 +1,9 @@
-import { publicPath } from "@/lib/basePath";
-import { LINKEDIN_PROFILE_URL } from "@/data/profileHub";
+import {
+  LINKEDIN_PROFILE_URL,
+  PROFILE_EMAIL_MAILTO,
+  PROFILE_PHONE_TEL,
+  PROFILE_RESUME_PDF_PATH,
+} from "@/data/profileHub";
 
 /** Projects panel only: grouped bullets by area. */
 export type ResumeProjectSubsections = {
@@ -38,17 +42,16 @@ export const resumeNodes: ResumeNode[] = [
     color: "#22d3ee",
     markerStyle: "uplinkPad",
     bullets: [
-      "People come first for me, relationships and teamwork are what I lean on most. I’m looking for a long-term team that cares about the same things I do.",
-      "B.S. in Computer Science at Northeastern (Jan 2021 – May 2026), GPA 3.4. Coursework in algorithms, systems, networking, distributed systems, and security.",
-      "Deep experience with AI-assisted workflows and automation — daily use of tools like Claude, Cursor, and Gemini for software creation, code review, and analysis, integrating them into development and operations pipelines.",
-      "Outside the keyboard: orbital mechanics, aerospace, and aviation. Northeastern Club Wrestling; former four-year Norwood High varsity wrestler.",
+      "People and teamwork come first — I’m looking for a long-term team that shares that priority.",
+      "B.S. Computer Science, Northeastern (2021–2026 expected), GPA 3.4 — algorithms, systems, networking, distributed systems, security.",
+      "Daily AI-assisted engineering with Claude, Cursor, and Gemini for build, review, and ops automation.",
+      "Outside work: orbital mechanics, aerospace, aviation, and wrestling.",
     ],
     links: [
-      { label: "Email", href: "mailto:seanwwetherell@gmail.com" },
-      { label: "Phone", href: "tel:+17818001653" },
+      { label: "Email", href: PROFILE_EMAIL_MAILTO },
       { label: "LinkedIn", href: LINKEDIN_PROFILE_URL },
-      { label: "University", href: "https://www.northeastern.edu/" },
-      { label: "Resume PDF", href: publicPath("/sean-wetherell-resume.pdf") },
+      { label: "Resume PDF", href: PROFILE_RESUME_PDF_PATH },
+      { label: "Phone", href: PROFILE_PHONE_TEL },
     ],
   },
   {

@@ -110,7 +110,7 @@ export default function LinkedInGatewayPage() {
             Go to LinkedIn
           </a>
           <Link
-            href="/"
+            href="/?section=about"
             className="inline-flex h-12 items-center justify-center rounded-xl border-2 border-white/40 bg-white/5 px-4 text-sm font-semibold tracking-wide text-slate-100 transition hover:border-white/55 hover:bg-white/10"
           >
             Stay and explore here

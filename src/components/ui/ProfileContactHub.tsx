@@ -6,6 +6,7 @@ import {
   useRef,
   useState,
   type CSSProperties,
+  type MouseEvent,
 } from "react";
 import {
   PROFILE_DISPLAY_NAME,
@@ -73,10 +74,10 @@ function Icon({ type, className }: { type: ProfileContactIcon; className?: strin
 
 function StaticRow({ row }: { row: Extract<ProfileHubRow, { variant: "static" }> }) {
   return (
-    <div className="flex items-start gap-2.5 py-2 pl-1 pr-2 text-left text-sm text-slate-200">
-      <Icon type={row.icon} className="mt-0.5 h-4 w-4 shrink-0 text-slate-300" />
+    <div className="flex items-start gap-2.5 px-2 py-2.5 text-left text-sm text-slate-200">
+      <Icon type={row.icon} className="mt-0.5 h-4 w-4 shrink-0 text-slate-400" />
       <div className="min-w-0 flex-1">
-        <p className="leading-snug text-slate-100">{row.listLabel}</p>
+        <p className="leading-snug text-slate-300">{row.listLabel}</p>
         {row.detail ? <p className="mt-0.5 text-xs leading-snug text-slate-500">{row.detail}</p> : null}
       </div>
     </div>
@@ -114,143 +115,104 @@ function InteractiveRow({
   const hasMailto = Boolean(contact.mailtoHref);
   const hasTel = Boolean(contact.telHref);
   const hasOpen = Boolean(contact.openHref);
-  const buttonClass =
-    "profile-hub-accent-btn inline-flex h-7 w-7 items-center justify-center rounded-md border border-white/15 text-slate-200 transition";
+  const isPrimary = contact.id === "email";
+  const primaryHref = contact.mailtoHref ?? contact.telHref ?? contact.openHref;
+  const opensExternal = Boolean(contact.openHref && !contact.mailtoHref && !contact.telHref);
+
+  const rowClass = isPrimary
+    ? "flex min-h-11 items-center gap-2.5 rounded-xl border px-2.5 py-2 text-left text-sm transition"
+    : "flex min-h-11 items-center gap-2.5 rounded-xl border border-white/20 bg-white/[0.04] px-2.5 py-2 text-left text-sm text-slate-100 transition hover:border-white/35 hover:bg-white/[0.08]";
+
+  const rowStyle: CSSProperties | undefined = isPrimary
+    ? {
+        borderColor: colorToRgba(ACCENT_COLOR_HEX, 0.55),
+        backgroundColor: colorToRgba(ACCENT_COLOR_HEX, 0.16),
+        color: "rgb(236, 254, 255)",
+      }
+    : undefined;
+
+  const iconBtnClass =
+    "profile-hub-accent-btn inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-white/20 text-slate-200 transition hover:border-white/35 hover:bg-white/10";
+
+  const stop = (event: MouseEvent) => {
+    event.stopPropagation();
+  };
+
+  const primaryLabel =
+    contact.id === "email"
+      ? "Compose email"
+      : contact.id === "phone"
+        ? "Call phone"
+        : contact.id === "resume"
+          ? "Open resume"
+          : `Open ${contact.listLabel}`;
+
+  const labelBlock = (
+    <>
+      <Icon type={contact.icon} className={isPrimary ? "h-4 w-4 shrink-0 text-cyan-100" : undefined} />
+      <span className="min-w-0 flex-1 truncate font-medium">{contact.listLabel}</span>
+    </>
+  );
+
+  const copyButton = resolveCopyValue(contact) ? (
+    <button
+      type="button"
+      onClick={(event) => {
+        stop(event);
+        void copy();
+      }}
+      className={iconBtnClass}
+      title={copiedAction === `${contact.id}-copy` ? "Copied" : `Copy ${contact.listLabel}`}
+      aria-label={copiedAction === `${contact.id}-copy` ? `${contact.listLabel} copied` : `Copy ${contact.listLabel}`}
+    >
+      <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.9">
+        <rect x="9" y="9" width="11" height="11" rx="2" />
+        <rect x="4" y="4" width="11" height="11" rx="2" />
+      </svg>
+    </button>
+  ) : null;
+
+  const secondaryOpen =
+    contact.id === "resume" && hasOpen ? (
+      <a
+        href={contact.openHref}
+        download="Sean_Wetherell_Resume.pdf"
+        onClick={stop}
+        className={iconBtnClass}
+        title="Download resume"
+        aria-label="Download resume"
+      >
+        <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.9">
+          <path d="M12 3v11" strokeLinecap="round" />
+          <path d="M8 11l4 4 4-4" strokeLinecap="round" strokeLinejoin="round" />
+          <path d="M5 19h14" strokeLinecap="round" />
+        </svg>
+      </a>
+    ) : null;
+
+  if (primaryHref) {
+    return (
+      <div className={rowClass} style={rowStyle}>
+        <a
+          href={primaryHref}
+          target={opensExternal ? "_blank" : undefined}
+          rel={opensExternal ? "noreferrer noopener" : undefined}
+          className="flex min-h-11 min-w-0 flex-1 items-center gap-2.5 rounded-lg outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/70"
+          title={primaryLabel}
+          aria-label={primaryLabel}
+        >
+          {labelBlock}
+        </a>
+        {secondaryOpen}
+        {copyButton}
+      </div>
+    );
+  }
 
   return (
-    <div className="flex items-center gap-2.5 rounded-lg border border-transparent py-2 pl-1 pr-2 text-left text-sm text-slate-200">
-      <Icon type={contact.icon} />
-      <span className="min-w-0 flex-1 truncate">{contact.listLabel}</span>
-      {contact.id === "resume" && hasOpen ? (
-        <>
-          <a
-            href={contact.openHref}
-            download="Sean_Wetherell_Resume.pdf"
-            className={buttonClass}
-            title="Download resume"
-            aria-label="Download resume"
-          >
-            <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.9">
-              <path d="M12 3v11" strokeLinecap="round" />
-              <path d="M8 11l4 4 4-4" strokeLinecap="round" strokeLinejoin="round" />
-              <path d="M5 19h14" strokeLinecap="round" />
-            </svg>
-          </a>
-          <a
-            href={contact.openHref}
-            target="_blank"
-            rel="noreferrer noopener"
-            className={buttonClass}
-            title="Open resume"
-            aria-label="Open resume"
-          >
-            <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.9">
-              <path d="M14 4h6v6" strokeLinecap="round" strokeLinejoin="round" />
-              <path d="M10 14L20 4" strokeLinecap="round" />
-              <path d="M20 14v6h-16v-16h6" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
-          </a>
-        </>
-      ) : null}
-      {contact.id === "phone" && hasTel ? (
-        <>
-          <a
-            href={contact.telHref}
-            className={buttonClass}
-            title="Call phone"
-            aria-label="Call phone"
-          >
-            <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.9">
-              <path d="M6.5 4h3l1.5 4-2 1.5a12 12 0 006.5 6.5l1.5-2 4 1.5v3a1 1 0 01-1 1A17 17 0 016.5 5a1 1 0 011-1z" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
-          </a>
-          <button
-            type="button"
-            onClick={() => void copy()}
-            className={buttonClass}
-            title={copiedAction === `${contact.id}-copy` ? "Copied" : "Copy phone"}
-            aria-label={copiedAction === `${contact.id}-copy` ? "Phone copied" : "Copy phone"}
-          >
-            <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.9">
-              <rect x="9" y="9" width="11" height="11" rx="2" />
-              <rect x="4" y="4" width="11" height="11" rx="2" />
-            </svg>
-          </button>
-        </>
-      ) : null}
-      {contact.id === "email" && hasMailto ? (
-        <>
-          <a
-            href={contact.mailtoHref}
-            className={buttonClass}
-            title="Compose email"
-            aria-label="Compose email"
-          >
-            <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.9">
-              <rect x="3" y="5" width="18" height="14" rx="2" />
-              <path d="M3 7l9 6 9-6" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
-          </a>
-          <button
-            type="button"
-            onClick={() => void copy()}
-            className={buttonClass}
-            title={copiedAction === `${contact.id}-copy` ? "Copied" : "Copy email"}
-            aria-label={copiedAction === `${contact.id}-copy` ? "Email copied" : "Copy email"}
-          >
-            <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.9">
-              <rect x="9" y="9" width="11" height="11" rx="2" />
-              <rect x="4" y="4" width="11" height="11" rx="2" />
-            </svg>
-          </button>
-        </>
-      ) : null}
-      {contact.id !== "resume" && hasOpen && !hasMailto && !hasTel ? (
-        <>
-          <a
-            href={contact.openHref}
-            target="_blank"
-            rel="noreferrer noopener"
-            className={buttonClass}
-            title={`Open ${contact.listLabel}`}
-            aria-label={`Open ${contact.listLabel}`}
-          >
-            <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.9">
-              <path d="M14 4h6v6" strokeLinecap="round" strokeLinejoin="round" />
-              <path d="M10 14L20 4" strokeLinecap="round" />
-              <path d="M20 14v6h-16v-16h6" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
-          </a>
-          <button
-            type="button"
-            onClick={() => void copy()}
-            className={buttonClass}
-            title={copiedAction === `${contact.id}-copy` ? "Copied" : `Copy ${contact.listLabel}`}
-            aria-label={
-              copiedAction === `${contact.id}-copy` ? `${contact.listLabel} copied` : `Copy ${contact.listLabel}`
-            }
-          >
-            <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.9">
-              <rect x="9" y="9" width="11" height="11" rx="2" />
-              <rect x="4" y="4" width="11" height="11" rx="2" />
-            </svg>
-          </button>
-        </>
-      ) : null}
-      {!hasMailto && !hasTel && !hasOpen ? (
-        <button
-          type="button"
-          onClick={() => void copy()}
-          className={buttonClass}
-          title={copiedAction === `${contact.id}-copy` ? "Copied" : "Copy"}
-          aria-label={copiedAction === `${contact.id}-copy` ? "Copied" : "Copy"}
-        >
-          <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.9">
-            <rect x="9" y="9" width="11" height="11" rx="2" />
-            <rect x="4" y="4" width="11" height="11" rx="2" />
-          </svg>
-        </button>
-      ) : null}
+    <div className={rowClass} style={rowStyle}>
+      <div className="flex min-h-11 min-w-0 flex-1 items-center gap-2.5">{labelBlock}</div>
+      {!hasMailto && !hasTel && !hasOpen ? copyButton : null}
     </div>
   );
 }
@@ -293,6 +255,9 @@ export function ProfileContactHub() {
     (hasVerticalScroll
       ? "overflow-y-scroll resume-panel-scroll-accent "
       : "overflow-y-auto ");
+
+  const interactiveRows = profileHubRows.filter((row) => row.variant === "interactive");
+  const staticRows = profileHubRows.filter((row) => row.variant === "static");
 
   return (
     <header
@@ -360,21 +325,26 @@ export function ProfileContactHub() {
         </div>
 
         <nav className="mt-4 border-t border-white/10 pt-3" aria-label="Profile and contact">
-          <ul className="space-y-0.5">
-            {profileHubRows.map((row) => (
+          <ul className="space-y-2">
+            {interactiveRows.map((row) => (
               <li key={row.id}>
-                {row.variant === "static" ? (
-                  <StaticRow row={row} />
-                ) : (
-                  <InteractiveRow
-                    contact={row}
-                    copiedAction={copiedAction}
-                    setCopiedAction={setCopiedAction}
-                  />
-                )}
+                <InteractiveRow
+                  contact={row}
+                  copiedAction={copiedAction}
+                  setCopiedAction={setCopiedAction}
+                />
               </li>
             ))}
           </ul>
+          {staticRows.length > 0 ? (
+            <ul className="mt-3 space-y-0.5 border-t border-white/10 pt-2">
+              {staticRows.map((row) => (
+                <li key={row.id}>
+                  <StaticRow row={row} />
+                </li>
+              ))}
+            </ul>
+          ) : null}
         </nav>
       </div>
     </header>

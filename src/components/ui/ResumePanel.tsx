@@ -17,6 +17,11 @@ import {
   type ProjectMiniNode,
 } from "@/data/projectMiniNodes";
 import type { ResumeNode, ResumeProjectSubsections } from "@/data/resumeNodes";
+import {
+  LINKEDIN_PROFILE_URL,
+  PROFILE_EMAIL_MAILTO,
+  PROFILE_RESUME_PDF_PATH,
+} from "@/data/profileHub";
 import { ACCENT_COLOR_HEX, colorToRgba } from "@/lib/colorFormat";
 import { motionDuration, motionEase, motionStagger } from "@/lib/motion";
 import {
@@ -24,6 +29,76 @@ import {
   SURFACE_PILL_BUTTON,
   SURFACE_SHELL_LIGHT,
 } from "@/lib/uiSurfaces";
+
+const PROJECT_DETAIL_TRUNCATE_CHARS = 220;
+function ExpandableDetails({ text }: { text: string }) {
+  const [expanded, setExpanded] = useState(false);
+  const needsTruncate = text.length > PROJECT_DETAIL_TRUNCATE_CHARS;
+  const shown =
+    !needsTruncate || expanded
+      ? text
+      : `${text.slice(0, PROJECT_DETAIL_TRUNCATE_CHARS).trimEnd()}…`;
+
+  return (
+    <div>
+      <p className="text-base leading-7 text-slate-200 md:text-[1.05rem] md:leading-8">{shown}</p>
+      {needsTruncate ? (
+        <button
+          type="button"
+          onClick={() => setExpanded((v) => !v)}
+          className="mt-2 text-sm font-semibold tracking-wide transition hover:brightness-110"
+          style={{ color: colorToRgba(ACCENT_COLOR_HEX, 0.95) }}
+        >
+          {expanded ? "Show less" : "Show more"}
+        </button>
+      ) : null}
+    </div>
+  );
+}
+
+function ProjectsContactStrip() {
+  const secondaryClass =
+    "inline-flex min-h-11 items-center justify-center rounded-xl border-2 border-white/35 bg-white/5 px-4 text-sm font-semibold text-slate-100 transition hover:border-white/50 hover:bg-white/10";
+  const primaryStyle: CSSProperties = {
+    borderColor: colorToRgba(ACCENT_COLOR_HEX, 0.55),
+    backgroundColor: colorToRgba(ACCENT_COLOR_HEX, 0.18),
+    color: "rgb(236, 254, 255)",
+  };
+
+  return (
+    <div className="shrink-0 border-t border-white/15 pt-4">
+      <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-300/95">
+        Get in touch
+      </p>
+      <div className="flex flex-wrap gap-2">
+        <a
+          href={PROFILE_EMAIL_MAILTO}
+          className="inline-flex min-h-11 items-center justify-center rounded-xl border px-4 text-sm font-semibold transition hover:brightness-110"
+          style={primaryStyle}
+        >
+          Email
+        </a>
+        <a
+          href={LINKEDIN_PROFILE_URL}
+          target="_blank"
+          rel="noreferrer noopener"
+          className={secondaryClass}
+        >
+          LinkedIn
+        </a>
+        <a
+          href={PROFILE_RESUME_PDF_PATH}
+          target="_blank"
+          rel="noreferrer noopener"
+          className={secondaryClass}
+        >
+          Resume PDF
+        </a>
+      </div>
+    </div>
+  );
+}
+
 /** Viewport-relative top-left of the resume panel (for connector alignment). */
 export type ResumePanelAnchor = {
   leftPct: number;
@@ -292,7 +367,7 @@ function ProjectDetailView({
       </div>
       <h3 className="text-2xl font-semibold tracking-tight text-white md:text-3xl">{detail.title}</h3>
       <p className="text-lg font-semibold leading-snug text-white">{detail.summary}</p>
-      <p className="text-base leading-7 text-slate-200 md:text-[1.05rem] md:leading-8">{detail.details}</p>
+      <ExpandableDetails text={detail.details} />
       {detail.chips && detail.chips.length > 0 ? (
         <div className="flex flex-wrap gap-2 pt-1">
           {detail.chips.map((chip) => (
@@ -925,6 +1000,7 @@ export function ResumePanel({
               </div>
             ) : null}
           </div>
+          {node.id === "projects" ? <ProjectsContactStrip /> : null}
         </motion.aside>
       )}
     </AnimatePresence>

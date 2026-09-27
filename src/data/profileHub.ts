@@ -32,52 +32,21 @@ export const PROFILE_TAGLINE = "CS @ Northeastern University · Boston, MA";
 export const PROFILE_IMAGE_SRC: string | null = publicPath("/headshot.webp");
 
 export const LINKEDIN_PROFILE_URL = "https://www.linkedin.com/in/sean-wetherell/";
+export const PROFILE_EMAIL = "seanwwetherell@gmail.com";
+export const PROFILE_EMAIL_MAILTO = `mailto:${PROFILE_EMAIL}`;
+export const PROFILE_RESUME_PDF_PATH = publicPath("/sean-wetherell-resume.pdf");
+export const PROFILE_PHONE_DISPLAY = "+1 (781) 800-1653";
+export const PROFILE_PHONE_TEL = "tel:+17818001653";
 
-/** Order: Northeastern, degree, Boston, then PDF, phone, email, LinkedIn (interactive). */
+/** Contact actions first, then a single credentials line (no street address). */
 export const profileHubRows: ProfileHubRow[] = [
-  {
-    id: "university",
-    variant: "static",
-    listLabel: "Northeastern University",
-    icon: "school",
-  },
-  {
-    id: "degree",
-    variant: "static",
-    listLabel: "B.S. Computer Science",
-    detail: "Jan 2021 – May 2026 · expected",
-    icon: "school",
-  },
-  {
-    id: "location",
-    variant: "static",
-    listLabel: "Boston, MA",
-    detail: "170 Hillside Street, 02120",
-    icon: "map",
-  },
-  {
-    id: "resume",
-    variant: "interactive",
-    listLabel: "Resume PDF",
-    icon: "file",
-    copyValue: "",
-    openHref: publicPath("/sean-wetherell-resume.pdf"),
-  },
-  {
-    id: "phone",
-    variant: "interactive",
-    listLabel: "Phone",
-    icon: "phone",
-    copyValue: "+1 (781) 800-1653",
-    telHref: "tel:+17818001653",
-  },
   {
     id: "email",
     variant: "interactive",
     listLabel: "Email",
     icon: "mail",
-    copyValue: "seanwwetherell@gmail.com",
-    mailtoHref: "mailto:seanwwetherell@gmail.com",
+    copyValue: PROFILE_EMAIL,
+    mailtoHref: PROFILE_EMAIL_MAILTO,
   },
   {
     id: "linkedin",
@@ -86,5 +55,28 @@ export const profileHubRows: ProfileHubRow[] = [
     icon: "link",
     copyValue: LINKEDIN_PROFILE_URL,
     openHref: LINKEDIN_PROFILE_URL,
+  },
+  {
+    id: "resume",
+    variant: "interactive",
+    listLabel: "Resume PDF",
+    icon: "file",
+    copyValue: "",
+    openHref: PROFILE_RESUME_PDF_PATH,
+  },
+  {
+    id: "phone",
+    variant: "interactive",
+    listLabel: "Phone",
+    icon: "phone",
+    copyValue: PROFILE_PHONE_DISPLAY,
+    telHref: PROFILE_PHONE_TEL,
+  },
+  {
+    id: "credentials",
+    variant: "static",
+    listLabel: "Northeastern · B.S. CS · Boston, MA",
+    detail: "Jan 2021 – May 2026 · expected",
+    icon: "school",
   },
 ];

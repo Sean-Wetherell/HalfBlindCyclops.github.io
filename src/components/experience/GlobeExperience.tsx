@@ -57,6 +57,14 @@ import {
   latLonToSceneWorld,
   sunDirectionForDate,
 } from "@/lib/geo";
+import {
+  NAV_TIP_DISMISSED_KEY,
+  SESSION_AUTO_ABOUT_KEY,
+  isDebugQueryEnabled,
+  readSectionFromLocation,
+  replaceSectionInUrl,
+  type SectionId,
+} from "@/lib/sectionNav";
 
 /** Horizontal beam + SVG junction. Panel anchors after line end. */
 const CONNECTOR_BAR_LEFT_PCT = JUNCTION_X;
@@ -399,11 +407,13 @@ function MiniNodeDetailPanel({
 }
 
 function CursorReadout() {
+  const debugEnabled = useMemo(() => isDebugQueryEnabled(), []);
   const { cursor } = useSyncExternalStore(
     subscribeFrameOverlay,
     getFrameOverlaySnapshot,
     getFrameOverlaySnapshot,
   );
+  if (!debugEnabled) return null;
   return (
     <div className="pointer-events-auto absolute bottom-4 left-4 z-[52] flex max-w-[calc(100vw-2rem)] flex-col gap-3 md:bottom-8 md:left-8 md:max-w-[calc(100vw-4rem)]">
       <div className="w-[13.5rem] shrink-0 rounded-lg border border-white/20 bg-slate-950/80 px-3 py-2 text-xs backdrop-blur-md md:text-sm">
@@ -500,6 +510,8 @@ export function GlobeExperience() {
   const [activeProjectMiniNodeId, setActiveProjectMiniNodeId] = useState<string | null>(null);
   const [sceneMode, setSceneMode] = useState<SceneMode>("idle");
   const [resumePanelAnchor, setResumePanelAnchor] = useState<ResumePanelAnchor | null>(null);
+  const [showNavTip, setShowNavTip] = useState(false);
+  const bootstrapDoneRef = useRef(false);
   const handleResumePanelAnchorChange = useCallback((next: ResumePanelAnchor | null) => {
     setResumePanelAnchor((prev) => {
       if (prev === null && next === null) return prev;
@@ -694,36 +706,55 @@ export function GlobeExperience() {
     [],
   );
 
-  const onSelectNode = (node: ResumeNode) => {
-    if (selectedNode?.id === node.id) return;
-
-    if (selectedNode !== null) {
-      // Phase 1: hide existing line immediately to avoid one-frame connector glitch.
-      setConnectorPathsActive(false);
-      if (switchRafRef.current !== null) cancelAnimationFrame(switchRafRef.current);
-      // Phase 2: commit node change on next frame.
-      switchRafRef.current = requestAnimationFrame(() => {
-        setSelectedNode(node);
-        if (node.id !== "projects") setActiveProjectMiniNodeId(null);
-        setSceneMode("focusing");
-      });
-      return;
+  const dismissNavTip = useCallback(() => {
+    setShowNavTip(false);
+    try {
+      window.localStorage.setItem(NAV_TIP_DISMISSED_KEY, "1");
+    } catch {
+      /* ignore */
     }
+  }, []);
 
-    // Initial selection.
-    setConnectorPathsActive(false);
-    setSelectedNode(node);
-    if (node.id !== "projects") setActiveProjectMiniNodeId(null);
-    setSceneMode("focusing");
-  };
+  const selectedNodeRef = useRef<ResumeNode | null>(null);
+  selectedNodeRef.current = selectedNode;
+
+  const onSelectNode = useCallback(
+    (node: ResumeNode, options?: { dismissTip?: boolean }) => {
+      if (options?.dismissTip !== false) {
+        dismissNavTip();
+      }
+      replaceSectionInUrl(node.id as SectionId);
+
+      const current = selectedNodeRef.current;
+      if (current?.id === node.id) return;
+
+      if (current !== null) {
+        // Phase 1: hide existing line immediately to avoid one-frame connector glitch.
+        setConnectorPathsActive(false);
+        if (switchRafRef.current !== null) cancelAnimationFrame(switchRafRef.current);
+        // Phase 2: commit node change on next frame.
+        switchRafRef.current = requestAnimationFrame(() => {
+          setSelectedNode(node);
+          if (node.id !== "projects") setActiveProjectMiniNodeId(null);
+          setSceneMode("focusing");
+        });
+        return;
+      }
+
+      // Initial selection.
+      setConnectorPathsActive(false);
+      setSelectedNode(node);
+      if (node.id !== "projects") setActiveProjectMiniNodeId(null);
+      setSceneMode("focusing");
+    },
+    [dismissNavTip],
+  );
 
   const onSelectProjectMiniNode = (miniNodeId: string) => {
     if (selectedNode?.id !== "projects") {
       const projectsNode = resumeNodes.find((node) => node.id === "projects");
       if (!projectsNode) return;
-      setConnectorPathsActive(false);
-      setSelectedNode(projectsNode);
-      setSceneMode("focusing");
+      onSelectNode(projectsNode);
     }
     setActiveProjectMiniNodeId(miniNodeId);
   };
@@ -741,14 +772,45 @@ export function GlobeExperience() {
     onSelectProjectMiniNode(projectMiniNodes[next].id);
   };
 
-  const onClosePanel = () => {
+  const onClosePanel = useCallback(() => {
     setConnectorPathsActive(false);
     setResumePanelAnchor(null);
     setActiveProjectMiniNodeId(null);
     setSelectedNode(null);
+    replaceSectionInUrl(null);
     // Keep the current camera pose; only close UI overlays.
     setSceneMode("idle");
-  };
+  }, []);
+
+  useEffect(() => {
+    try {
+      setShowNavTip(window.localStorage.getItem(NAV_TIP_DISMISSED_KEY) !== "1");
+    } catch {
+      setShowNavTip(true);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (bootstrapDoneRef.current) return;
+    bootstrapDoneRef.current = true;
+
+    const fromUrl = readSectionFromLocation();
+    if (fromUrl) {
+      const node = resumeNodes.find((n) => n.id === fromUrl);
+      if (node) onSelectNode(node, { dismissTip: false });
+      return;
+    }
+
+    try {
+      if (!window.sessionStorage.getItem(SESSION_AUTO_ABOUT_KEY)) {
+        window.sessionStorage.setItem(SESSION_AUTO_ABOUT_KEY, "1");
+        const about = resumeNodes.find((n) => n.id === "about");
+        if (about) onSelectNode(about, { dismissTip: false });
+      }
+    } catch {
+      /* ignore */
+    }
+  }, [onSelectNode]);
 
   useEffect(() => {
     const onWindowKeyDown = (event: KeyboardEvent) => {
@@ -960,7 +1022,25 @@ export function GlobeExperience() {
               );
             })}
           </nav>
-          {contextRibbon ? (
+          {showNavTip ? (
+            <motion.div
+              className="pointer-events-auto absolute left-1/2 top-full z-10 mt-2 flex max-w-[min(92vw,22rem)] -translate-x-1/2 items-center gap-2 rounded-full border border-white/15 bg-slate-950/75 px-3 py-1.5 text-[11px] font-medium leading-snug text-slate-200/95 backdrop-blur-xl"
+              initial={prefersReducedMotion ? false : { opacity: 0, y: -6 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: motionDuration.medium, ease: motionEase.smoothOut }}
+              role="status"
+            >
+              <span>Pick a section — or click a pin on the globe.</span>
+              <button
+                type="button"
+                onClick={dismissNavTip}
+                className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-white/20 text-sm leading-none text-slate-200 transition hover:bg-white/10"
+                aria-label="Dismiss tip"
+              >
+                ×
+              </button>
+            </motion.div>
+          ) : contextRibbon ? (
             <motion.div
               className="pointer-events-none absolute left-1/2 top-full mt-2 -translate-x-1/2 rounded-full border border-white/15 bg-slate-950/62 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-200/95 backdrop-blur-xl"
               initial={{ opacity: 0, y: -6 }}
