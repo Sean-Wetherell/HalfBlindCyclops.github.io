@@ -35,7 +35,7 @@ export const resumeNodes: ResumeNode[] = [
   {
     id: "about",
     title: "About",
-    subtitle: "Sean Wetherell — CS @ Northeastern · Boston, MA",
+    subtitle: "Sean Wetherell — Systems & Full-Stack Engineer · Boston, MA",
     /** Globe pin: Northeast (Boston / Northeastern). */
     latitude: 42.3399,
     longitude: -71.0892,
@@ -43,7 +43,7 @@ export const resumeNodes: ResumeNode[] = [
     markerStyle: "uplinkPad",
     bullets: [
       "People and teamwork come first — I’m looking for a long-term team that shares that priority.",
-      "B.S. Computer Science, Northeastern (2021–2026 expected), GPA 3.4 — algorithms, systems, networking, distributed systems, security.",
+      "B.S. Computer Science, Northeastern (2021–2026), GPA 3.4 — algorithms, systems, networking, distributed systems, security.",
       "Daily AI-assisted engineering with Claude, Cursor, and Gemini for build, review, and ops automation.",
       "Outside work: orbital mechanics, aerospace, aviation, and wrestling.",
     ],
@@ -64,13 +64,11 @@ export const resumeNodes: ResumeNode[] = [
     color: "#38bdf8",
     markerStyle: "uplinkPad",
     bullets: [
-      "Center for Inclusive Computing — Research Assistant (Jan 2026 – Present), Boston: CS research via curriculum analysis and data visualization; redesigning internal web assets for findings and institutional tracking.",
-      "Startup — Consultant (Nov 2024 – Apr 2025), Boston: strategic support through acquisition; technical and process alignment for integration with the parent company on AI descriptor tech.",
-      "Boston Globe Media — IT Analyst (Jan 2024 – Sep 2024), Boston: remote management for weather modeling systems; AI-driven workflow automation for operations; executive support and enterprise tooling across Active Directory, Jamf, Sophos, and Jira.",
-      "Vita Needle Co. — Precision Manufacturing Technician (Apr 2023 – Sep 2023), Newton: micrometer-scale parts, inventory and machining; high-priority tracking for $500K+ orders.",
-      "**Boston’s Best Chimney** — Mason Assistant (Jun 2022 – Sep 2022).",
-      "**Northeastern University** — Athletic Facilities Coordinator (Apr 2021 – Jan 2022).",
-      "**Elaine Construction** — Construction Laborer (May 2020 – Apr 2021).",
+      "Center for Inclusive Computing — Research Assistant (Jan 2026 – Present), Boston: Led CS research via curriculum analysis and data visualization; redesigning internal web assets for findings and institutional tracking.",
+      "Startup — Consultant (Nov 2024 – Apr 2025), Boston: Provided strategic support through acquisition; technical and process alignment for integration with the parent company on AI descriptor tech.",
+      "Boston Globe Media — IT Analyst (Jan 2024 – Sep 2024), Boston: Owned remote management for weather modeling systems; AI-driven workflow automation for operations; executive support and enterprise tooling across Active Directory, Jamf, Sophos, and Jira.",
+      "Vita Needle Co. — Precision Manufacturing Technician (Apr 2023 – Sep 2023), Newton: Machined micrometer-scale parts, inventory and tooling; high-priority tracking for $500K+ orders.",
+      "Early Roles (2020–2022): Construction, Masonry & NEU Athletics.",
     ],
   },
   {

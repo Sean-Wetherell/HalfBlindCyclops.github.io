@@ -66,7 +66,7 @@ function ProjectsContactStrip() {
   };
 
   return (
-    <div className="shrink-0 border-t border-white/15 pt-4">
+    <div className="shrink-0 border-t border-white/15 pt-4 md:hidden">
       <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-300/95">
         Get in touch
       </p>
@@ -260,14 +260,6 @@ function ProjectsScrollDownCue() {
   );
 }
 
-function projectCardSubtitle(node: ProjectMiniNode): string {
-  const profile = getProjectMiniNodeProfile(node.id);
-  if (!profile) return "";
-  const parts = [profile.timeframe, profile.role].filter(Boolean);
-  if (parts.length > 0) return parts.join(" · ");
-  return profile.stack.slice(0, 2).join(" · ");
-}
-
 function ProjectIndexButton({
   node,
   isActive,
@@ -279,7 +271,8 @@ function ProjectIndexButton({
   onSelect: () => void;
   onKeyDown?: (event: ReactKeyboardEvent<HTMLButtonElement>) => void;
 }) {
-  const subtitle = projectCardSubtitle(node);
+  const profile = getProjectMiniNodeProfile(node.id);
+  const stackTags = profile?.stack.slice(0, 3) ?? [];
   return (
     <button
       type="button"
@@ -300,10 +293,22 @@ function ProjectIndexButton({
       }
     >
       <p className="text-sm font-semibold leading-snug text-white">{node.title}</p>
-      {subtitle ? (
+      {profile?.timeframe ? (
         <p className="mt-1 text-xs leading-relaxed text-slate-400 group-hover:text-slate-300">
-          {subtitle}
+          {profile.timeframe}
         </p>
+      ) : null}
+      {stackTags.length > 0 ? (
+        <div className="mt-1.5 flex flex-wrap gap-1">
+          {stackTags.map((tag) => (
+            <span
+              key={tag}
+              className="rounded border border-white/15 bg-white/[0.06] px-1.5 py-0.5 text-[10px] font-medium leading-none text-slate-300"
+            >
+              {tag}
+            </span>
+          ))}
+        </div>
       ) : null}
     </button>
   );
@@ -583,8 +588,6 @@ type ResumePanelProps = {
   onGoToNext?: () => void;
   /** Label for the next section; used for the Next control and accessibility. */
   nextSectionTitle?: string;
-  /** True when "next" wraps back to the first section (so the control reads "Back to start"). */
-  nextIsRestart?: boolean;
   isSplitView?: boolean;
   /** Horizontal connector line Y (percent), e.g. `"42%"`. */
   streamStartY?: string;
@@ -604,7 +607,6 @@ type ResumePanelProps = {
   onGoToNextProject?: () => void;
   projectNavPosition?: { current: number; total: number };
   projectBreadcrumb?: string | null;
-  contextRibbon?: string | null;
   scrollToBulletIndex?: number | null;
   onDidScrollToBullet?: () => void;
   onPanelAnchorChange?: (anchor: ResumePanelAnchor | null) => void;
@@ -615,7 +617,6 @@ export function ResumePanel({
   onClose,
   onGoToNext,
   nextSectionTitle,
-  nextIsRestart = false,
   isSplitView = false,
   streamStartY = "50%",
   splitViewPanelTop,
@@ -630,7 +631,6 @@ export function ResumePanel({
   onGoToNextProject,
   projectNavPosition,
   projectBreadcrumb = null,
-  contextRibbon = null,
   scrollToBulletIndex = null,
   onDidScrollToBullet,
   onPanelAnchorChange,
@@ -866,13 +866,11 @@ export function ResumePanel({
                 {onGoToNext ? (
                   <button
                     type="button"
-                    onClick={nextIsRestart ? onClose : onGoToNext}
+                    onClick={onGoToNext}
                     aria-label={
-                      nextIsRestart
-                        ? "Close section"
-                        : nextSectionTitle
-                          ? `Go to next section: ${nextSectionTitle}`
-                          : "Go to next section"
+                      nextSectionTitle
+                        ? `Go to next section: ${nextSectionTitle}`
+                        : "Go to next section"
                     }
                     className={`inline-flex shrink-0 items-center gap-1.5 px-4 py-2 text-[0.9375rem] font-medium tracking-wide hover:brightness-110 md:px-5 md:py-2.5 md:text-base ${SURFACE_PILL_BUTTON}`}
                     style={{
@@ -881,22 +879,17 @@ export function ResumePanel({
                       color: "rgb(236, 254, 255)",
                     }}
                   >
-                    {nextIsRestart ? "Close" : "Next"}
+                    Next
                     <span
                       aria-hidden
                       className="text-base leading-none md:text-lg"
                       style={{ color: colorToRgba(ACCENT_COLOR_HEX, 0.9) }}
                     >
-                      {nextIsRestart ? "×" : "→"}
+                      →
                     </span>
                   </button>
                 ) : null}
               </div>
-              {contextRibbon ? (
-                <p className="mt-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-300/95">
-                  {contextRibbon}
-                </p>
-              ) : null}
               {node.subtitle.trim() ? (
                 <p
                   className={
@@ -974,7 +967,7 @@ export function ResumePanel({
                 </ul>
               )}
               {node.links && node.links.length > 0 ? (
-                <div className="mt-6 flex flex-wrap gap-3">
+                <div className="mt-6 flex flex-wrap gap-3 md:hidden">
                   {node.links.map((link) => (
                     <a
                       key={link.label}

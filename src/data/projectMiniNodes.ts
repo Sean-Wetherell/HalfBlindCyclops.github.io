@@ -22,6 +22,9 @@ export type ProjectMiniNodeProfile = {
   }>;
 };
 
+/** Default project shown when the Projects panel opens with no selection. */
+export const FEATURED_PROJECT_MINI_NODE_ID = "systems-orbit";
+
 /**
  * Mini nodes cluster around the primary Projects marker (`1.3521, 103.8198`) so users can
  * drill into individual projects without leaving the Projects section context.

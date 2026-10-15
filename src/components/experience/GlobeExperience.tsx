@@ -32,7 +32,11 @@ import {
   JUNCTION_X,
   ResumeConnector,
 } from "@/components/ui/ResumeConnector";
-import { getProjectMiniNodeProfile, projectMiniNodes } from "@/data/projectMiniNodes";
+import {
+  FEATURED_PROJECT_MINI_NODE_ID,
+  getProjectMiniNodeProfile,
+  projectMiniNodes,
+} from "@/data/projectMiniNodes";
 import { INITIAL_GLOBE_FOCUS, resumeNodes, type ResumeNode } from "@/data/resumeNodes";
 import { ACCENT_COLOR_HEX, colorToRgba } from "@/lib/colorFormat";
 import { miniBulletParts } from "@/lib/projectBullet";
@@ -605,26 +609,11 @@ export function GlobeExperience() {
     if (!isProjectsSelected || !activeProjectMiniNode) return null;
     return `Projects / ${activeProjectMiniNode.title}`;
   }, [activeProjectMiniNode, isProjectsSelected]);
-  const contextRibbon = useMemo(() => {
-    if (!selectedNode) return null;
-    if (isProjectsSelected) {
-      if (activeProjectMiniNode) {
-        return projectBreadcrumb;
-      }
-      return "Projects / Browse";
-    }
-    if (isExperienceSelected) {
-      return "Experience";
-    }
-    return selectedNode.title;
-  }, [activeProjectMiniNode, isExperienceSelected, isProjectsSelected, projectBreadcrumb, selectedNode]);
   const panelNextIndex =
     showPanel === null
       ? -1
       : (resumeNodes.findIndex((n) => n.id === showPanel.id) + 1) % resumeNodes.length;
   const panelNextNode = panelNextIndex < 0 ? null : resumeNodes[panelNextIndex];
-  /** Last section wraps to the first node — surface that as "Back to start" instead of "Next". */
-  const panelNextIsRestart = panelNextIndex === 0;
   /** Two-phase switch: hide signal line first, then commit node swap next frame. */
   const [connectorPathsActive, setConnectorPathsActive] = useState(true);
   const switchRafRef = useRef<number | null>(null);
@@ -735,7 +724,11 @@ export function GlobeExperience() {
         // Phase 2: commit node change on next frame.
         switchRafRef.current = requestAnimationFrame(() => {
           setSelectedNode(node);
-          if (node.id !== "projects") setActiveProjectMiniNodeId(null);
+          if (node.id !== "projects") {
+            setActiveProjectMiniNodeId(null);
+          } else {
+            setActiveProjectMiniNodeId((prev) => prev ?? FEATURED_PROJECT_MINI_NODE_ID);
+          }
           setSceneMode("focusing");
         });
         return;
@@ -744,7 +737,11 @@ export function GlobeExperience() {
       // Initial selection.
       setConnectorPathsActive(false);
       setSelectedNode(node);
-      if (node.id !== "projects") setActiveProjectMiniNodeId(null);
+      if (node.id !== "projects") {
+        setActiveProjectMiniNodeId(null);
+      } else {
+        setActiveProjectMiniNodeId((prev) => prev ?? FEATURED_PROJECT_MINI_NODE_ID);
+      }
       setSceneMode("focusing");
     },
     [dismissNavTip],
@@ -1040,15 +1037,6 @@ export function GlobeExperience() {
                 ×
               </button>
             </motion.div>
-          ) : contextRibbon ? (
-            <motion.div
-              className="pointer-events-none absolute left-1/2 top-full mt-2 -translate-x-1/2 rounded-full border border-white/15 bg-slate-950/62 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-200/95 backdrop-blur-xl"
-              initial={{ opacity: 0, y: -6 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: motionDuration.medium, ease: motionEase.smoothOut }}
-            >
-              {contextRibbon}
-            </motion.div>
           ) : null}
         </div>
       </div>
@@ -1070,7 +1058,6 @@ export function GlobeExperience() {
           showPanel && panelNextNode ? () => onSelectNode(panelNextNode) : undefined
         }
         nextSectionTitle={panelNextNode?.title}
-        nextIsRestart={panelNextIsRestart}
         isSplitView={isSplitView}
         streamStartY={streamStartY}
         splitViewPanelTop={splitPanelTop}
@@ -1085,7 +1072,6 @@ export function GlobeExperience() {
         onGoToNextProject={() => onStepProject(1)}
         projectNavPosition={projectNavPosition}
         projectBreadcrumb={projectBreadcrumb}
-        contextRibbon={contextRibbon}
         onPanelAnchorChange={handleResumePanelAnchorChange}
       />
       <SceneLoader />

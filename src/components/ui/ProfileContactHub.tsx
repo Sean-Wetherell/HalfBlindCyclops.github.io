@@ -115,21 +115,11 @@ function InteractiveRow({
   const hasMailto = Boolean(contact.mailtoHref);
   const hasTel = Boolean(contact.telHref);
   const hasOpen = Boolean(contact.openHref);
-  const isPrimary = contact.id === "email";
   const primaryHref = contact.mailtoHref ?? contact.telHref ?? contact.openHref;
   const opensExternal = Boolean(contact.openHref && !contact.mailtoHref && !contact.telHref);
 
-  const rowClass = isPrimary
-    ? "flex min-h-11 items-center gap-2.5 rounded-xl border px-2.5 py-2 text-left text-sm transition"
-    : "flex min-h-11 items-center gap-2.5 rounded-xl border border-white/20 bg-white/[0.04] px-2.5 py-2 text-left text-sm text-slate-100 transition hover:border-white/35 hover:bg-white/[0.08]";
-
-  const rowStyle: CSSProperties | undefined = isPrimary
-    ? {
-        borderColor: colorToRgba(ACCENT_COLOR_HEX, 0.55),
-        backgroundColor: colorToRgba(ACCENT_COLOR_HEX, 0.16),
-        color: "rgb(236, 254, 255)",
-      }
-    : undefined;
+  const rowClass =
+    "flex min-h-11 items-center gap-2.5 rounded-xl border border-white/20 bg-white/[0.04] px-2.5 py-2 text-left text-sm text-slate-100 transition hover:border-white/35 hover:bg-white/[0.08]";
 
   const iconBtnClass =
     "profile-hub-accent-btn inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-white/20 text-slate-200 transition hover:border-white/35 hover:bg-white/10";
@@ -149,7 +139,7 @@ function InteractiveRow({
 
   const labelBlock = (
     <>
-      <Icon type={contact.icon} className={isPrimary ? "h-4 w-4 shrink-0 text-cyan-100" : undefined} />
+      <Icon type={contact.icon} />
       <span className="min-w-0 flex-1 truncate font-medium">{contact.listLabel}</span>
     </>
   );
@@ -192,7 +182,7 @@ function InteractiveRow({
 
   if (primaryHref) {
     return (
-      <div className={rowClass} style={rowStyle}>
+      <div className={rowClass}>
         <a
           href={primaryHref}
           target={opensExternal ? "_blank" : undefined}
@@ -210,7 +200,7 @@ function InteractiveRow({
   }
 
   return (
-    <div className={rowClass} style={rowStyle}>
+    <div className={rowClass}>
       <div className="flex min-h-11 min-w-0 flex-1 items-center gap-2.5">{labelBlock}</div>
       {!hasMailto && !hasTel && !hasOpen ? copyButton : null}
     </div>

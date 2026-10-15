@@ -1,11 +1,11 @@
 "use client";
 
-import { useEffect, useLayoutEffect, useRef } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { motion } from "framer-motion";
 import { ACCENT_COLOR_HEX } from "@/lib/colorFormat";
 import { connectorMotion } from "@/lib/motion";
 
-/** Horizontal beam junction in SVG viewBox units (matches GlobeExperience `CONNECTOR_BAR_LEFT_PCT`). */
+/** Horizontal beam junction as viewport % (matches GlobeExperience `CONNECTOR_BAR_LEFT_PCT`). */
 export const JUNCTION_X = 45;
 
 type AxisSample = { s: number; x: number; y: number; nx: number; ny: number };
@@ -16,7 +16,13 @@ function clamp01(t: number) {
 
 type PathPoint = { x: number; y: number };
 
-/** Dense baseline samples along pin → junction (smooth cubic fit). */
+type ViewportSize = { width: number; height: number };
+
+function pctToPx(pct: number, size: number) {
+  return (pct / 100) * size;
+}
+
+/** Dense baseline samples along pin → junction in screen pixels. */
 function sampleConnectorAxisDense(px: number, py: number, yJ: number, xJ: number): AxisSample[] {
   const ax = px;
   const ay = py;
@@ -29,7 +35,8 @@ function sampleConnectorAxisDense(px: number, py: number, yJ: number, xJ: number
   const ny = dx / len;
   const totalLen = len;
   const out: AxisSample[] = [];
-  const steps = Math.max(72, Math.ceil(len * 14));
+  // Pixel space: ~1 sample every 6px, with a floor for short links.
+  const steps = Math.max(72, Math.ceil(len / 6));
 
   for (let i = 0; i <= steps; i++) {
     const t = i / steps;
@@ -92,7 +99,7 @@ const RF_PACKET_RIPPLE_MIX = 0.58;
 const RF_LAYER_MULTIPATH_GAIN = 1.22;
 const RF_CHAOS_GAIN = 1.45;
 
-/** Slightly thinner than before; still reads above sat link width (0.95 in OrbitalSatellites). */
+/** Stroke width in CSS pixels (screen-space SVG). */
 const RF_LINK_STROKE_WIDTH = 1.65;
 
 const PACKET_TRAVEL_SEC = 1.25;
@@ -173,11 +180,12 @@ function buildRfLayerPathD(
   timePhase: number,
   spatialPhase: number,
   phase: number,
+  ampScale: number,
 ): string {
   const samples = sampleConnectorAxisDense(px, py, yJ, xJ);
   const pts: PathPoint[] = [];
   for (const p of samples) {
-    const off = rfLayerNormalOffset(p.s, phase, timePhase, spatialPhase);
+    const off = rfLayerNormalOffset(p.s, phase, timePhase, spatialPhase) * ampScale;
     pts.push({ x: p.x + p.nx * off, y: p.y + p.ny * off });
   }
   return smoothPathThroughPoints(pts);
@@ -232,69 +240,101 @@ function buildStraightChordWithBurstPathD(
   packetCenter: number,
   phase: number,
   burstKey: number,
+  ampScale: number,
 ): string {
   const shape = rfBurstShape(burstKey, phase);
   const samples = sampleConnectorAxisDense(px, py, yJ, xJ);
   const pts: PathPoint[] = [];
   for (const p of samples) {
-    const off = straightBurstNormalOffset(p.s, packetCenter, phase, shape);
+    const off = straightBurstNormalOffset(p.s, packetCenter, phase, shape) * ampScale;
     pts.push({ x: p.x + p.nx * off, y: p.y + p.ny * off });
   }
   return smoothPathThroughPoints(pts);
 }
 
-/** Multipath layer + modulated chord burst along pin → junction. */
+/** Multipath layer + modulated chord burst along pin → junction (screen-pixel coords). */
 function RfLinkPaths({
-  pinX,
-  pinY,
-  yJunction,
+  pinXPct,
+  pinYPct,
+  yJunctionPct,
+  viewport,
   reducedMotion,
   pathsActive,
   lineColor = ACCENT_COLOR_HEX,
 }: {
-  pinX: number;
-  pinY: number;
-  yJunction: number;
+  pinXPct: number;
+  pinYPct: number;
+  yJunctionPct: number;
+  viewport: ViewportSize;
   reducedMotion: boolean;
-    /** When false, paths are cleared and the RF loop is paused. */
+  /** When false, paths are cleared and the RF loop is paused. */
   pathsActive: boolean;
   lineColor?: string;
 }) {
   const rfLayerRef = useRef<SVGPathElement | null>(null);
   const chordRef = useRef<SVGPathElement | null>(null);
-  const propsRef = useRef({ pinX, pinY, yJ: yJunction });
+  const propsRef = useRef({
+    pinXPct,
+    pinYPct,
+    yJunctionPct,
+    width: viewport.width,
+    height: viewport.height,
+  });
   useLayoutEffect(() => {
-    propsRef.current = { pinX, pinY, yJ: yJunction };
-  }, [pinX, pinY, yJunction]);
+    propsRef.current = {
+      pinXPct,
+      pinYPct,
+      yJunctionPct,
+      width: viewport.width,
+      height: viewport.height,
+    };
+  }, [pinXPct, pinYPct, yJunctionPct, viewport.width, viewport.height]);
 
   useEffect(() => {
-    if (!pathsActive) {
+    if (!pathsActive || viewport.width <= 0 || viewport.height <= 0) {
       rfLayerRef.current?.setAttribute("d", "");
       chordRef.current?.setAttribute("d", "");
       return;
     }
 
     const apply = (packetCenter: number, timePhase: number, burstKey: number) => {
-      const { pinX: px, pinY: py, yJ } = propsRef.current;
-      const phase = px * 0.083 + py * 0.057;
-      const spatialPhase = px * 0.092 + py * 0.068;
-      const rfD = buildRfLayerPathD(px, py, yJ, JUNCTION_X, timePhase, spatialPhase, phase);
+      const { pinXPct: pxPct, pinYPct: pyPct, yJunctionPct: yJPct, width, height } =
+        propsRef.current;
+      const px = pctToPx(pxPct, width);
+      const py = pctToPx(pyPct, height);
+      const yJ = pctToPx(yJPct, height);
+      const xJ = pctToPx(JUNCTION_X, width);
+      // Keep RF amplitude similar to the old 0–100 viewBox calibration.
+      const ampScale = Math.min(width, height) / 100;
+      const phase = pxPct * 0.083 + pyPct * 0.057;
+      const spatialPhase = pxPct * 0.092 + pyPct * 0.068;
+      const rfD = buildRfLayerPathD(
+        px,
+        py,
+        yJ,
+        xJ,
+        timePhase,
+        spatialPhase,
+        phase,
+        ampScale,
+      );
       const chordD = buildStraightChordWithBurstPathD(
         px,
         py,
         yJ,
-        JUNCTION_X,
+        xJ,
         packetCenter,
         phase,
         burstKey,
+        ampScale,
       );
       rfLayerRef.current?.setAttribute("d", rfD);
       chordRef.current?.setAttribute("d", chordD);
     };
 
     if (reducedMotion) {
-      const { pinX: px, pinY: py } = propsRef.current;
-      const burstKey = Math.floor(px * 73 + py * 91) | 0;
+      const { pinXPct: pxPct, pinYPct: pyPct } = propsRef.current;
+      const burstKey = Math.floor(pxPct * 73 + pyPct * 91) | 0;
       apply(0.44, 1.15, burstKey);
       return;
     }
@@ -306,19 +346,20 @@ function RfLinkPaths({
       const u = elapsed % PACKET_TRAVEL_SEC;
       const packetCenter = 0.065 + (u / PACKET_TRAVEL_SEC) * 0.87;
       const timePhase = elapsed * RF_TIME_DRIFT_RAD_PER_SEC;
-      const { pinX: px, pinY: py } = propsRef.current;
+      const { pinXPct: pxPct, pinYPct: pyPct } = propsRef.current;
       const burstKey =
-        (Math.floor(elapsed / PACKET_TRAVEL_SEC) * 1009 + Math.floor(px * 73 + py * 91)) | 0;
+        (Math.floor(elapsed / PACKET_TRAVEL_SEC) * 1009 +
+          Math.floor(pxPct * 73 + pyPct * 91)) |
+        0;
       apply(packetCenter, timePhase, burstKey);
       rafId = requestAnimationFrame(loop);
     };
     rafId = requestAnimationFrame(loop);
     return () => cancelAnimationFrame(rafId);
-  }, [pathsActive, pinX, pinY, yJunction, reducedMotion]);
+  }, [pathsActive, pinXPct, pinYPct, yJunctionPct, viewport.width, viewport.height, reducedMotion]);
 
   const pathRender = {
     shapeRendering: "geometricPrecision" as const,
-    vectorEffect: "non-scaling-stroke" as const,
     strokeLinecap: "round" as const,
     strokeLinejoin: "round" as const,
   };
@@ -357,8 +398,11 @@ const svgRetractTransition = {
 };
 
 type ResumeConnectorProps = {
+  /** Pin X as viewport percent (0–100). */
   pinX: number;
+  /** Pin Y as viewport percent (0–100). */
   pinY: number;
+  /** Junction Y as viewport percent (0–100). */
   yJunction: number;
   reducedMotion: boolean;
   /** When false, paths are hidden and the RF loop pauses (e.g. brief gap when switching pins). */
@@ -374,21 +418,56 @@ export function ResumeConnector({
   pathsActive,
   lineColor = ACCENT_COLOR_HEX,
 }: ResumeConnectorProps) {
+  const svgRef = useRef<SVGSVGElement | null>(null);
+  const [viewport, setViewport] = useState<ViewportSize>({ width: 0, height: 0 });
+
+  useLayoutEffect(() => {
+    const el = svgRef.current;
+    if (!el) return;
+    const update = () => {
+      const rect = el.getBoundingClientRect();
+      setViewport((prev) => {
+        if (
+          Math.abs(prev.width - rect.width) < 0.5 &&
+          Math.abs(prev.height - rect.height) < 0.5
+        ) {
+          return prev;
+        }
+        return { width: rect.width, height: rect.height };
+      });
+    };
+    update();
+    const ro = new ResizeObserver(update);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+
   return (
     <motion.svg
+      ref={svgRef}
       className={svgClass}
-      style={{ color: lineColor }}
-      viewBox="0 0 100 100"
-      preserveAspectRatio="none"
+      style={{
+        color: lineColor,
+        filter: `drop-shadow(0 0 4px ${lineColor}88) drop-shadow(0 0 10px ${lineColor}44)`,
+      }}
+      width="100%"
+      height="100%"
+      viewBox={
+        viewport.width > 0 && viewport.height > 0
+          ? `0 0 ${viewport.width} ${viewport.height}`
+          : undefined
+      }
+      preserveAspectRatio="xMidYMid meet"
       initial={{ opacity: 0 }}
       animate={{ opacity: pathsActive ? 1 : 0 }}
       exit={{ opacity: 0, transition: svgRetractTransition }}
       transition={pathsActive ? svgPresenceTransition : svgRetractTransition}
     >
       <RfLinkPaths
-        pinX={pinX}
-        pinY={pinY}
-        yJunction={yJunction}
+        pinXPct={pinX}
+        pinYPct={pinY}
+        yJunctionPct={yJunction}
+        viewport={viewport}
         reducedMotion={reducedMotion}
         pathsActive={pathsActive}
         lineColor="currentColor"

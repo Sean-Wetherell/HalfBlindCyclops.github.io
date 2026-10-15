@@ -26,7 +26,7 @@ export type ProfileHubInteractiveRow = {
 export type ProfileHubRow = ProfileHubStaticRow | ProfileHubInteractiveRow;
 
 export const PROFILE_DISPLAY_NAME = "Sean Wetherell";
-export const PROFILE_TAGLINE = "CS @ Northeastern University · Boston, MA";
+export const PROFILE_TAGLINE = "Systems & Full-Stack Engineer · Boston, MA";
 
 /** Served from `/public/headshot.webp`. */
 export const PROFILE_IMAGE_SRC: string | null = publicPath("/headshot.webp");
@@ -76,7 +76,7 @@ export const profileHubRows: ProfileHubRow[] = [
     id: "credentials",
     variant: "static",
     listLabel: "Northeastern · B.S. CS · Boston, MA",
-    detail: "Jan 2021 – May 2026 · expected",
+    detail: "Jan 2021 – May 2026",
     icon: "school",
   },
 ];
